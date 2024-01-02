@@ -2,14 +2,22 @@ import logging as log
 
 import grpc
 
-import social_media_stream_pb2_grpc as grpc_stubs, social_media_stream_pb2 as grpc_message_type
+import grpc_auth_client_interceptor
+import social_media_stream_pb2 as grpc_message_type
+import social_media_stream_pb2_grpc as grpc_stubs
 
 
 class GrpcClient:
-    def __init__(self):
-        self.channel = grpc.insecure_channel('localhost:9030')
-        self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
+
+    def __init__(self, auth_enabled=False):
         log.basicConfig(level=log.INFO, format='%(funcName)s - %(levelname)s - %(message)s')
+        if auth_enabled:
+            interceptors = [grpc_auth_client_interceptor.GrpcAuthClientInterceptor()]
+            self.channel = grpc.intercept_channel(grpc.insecure_channel('localhost:9030'), *interceptors)
+            self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
+        else:
+            self.channel = grpc.insecure_channel('localhost:9030')
+            self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
 
     def _receive_stream_request(self, provider_name='40_tonn', quality='4k'):
         return grpc_message_type.WatchStreamRequest(provider_name=provider_name, quality=quality)
@@ -82,7 +90,15 @@ class GrpcClient:
 
 
 if __name__ == '__main__':
-    client = GrpcClient()
+    # run auth client
+    auth_client = GrpcClient(auth_enabled=True)
+    auth_client.download_stream()
+    auth_client.watch_stream()
+    auth_client.start_stream()
+    auth_client.join_interact_stream()
+
+    # run no auth client
+    client = GrpcClient(auth_enabled=False)
     client.download_stream()
     client.watch_stream()
     client.start_stream()
