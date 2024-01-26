@@ -1,23 +1,41 @@
 import logging as log
+import time
 
 import grpc
 
-import grpc_auth_client_interceptor
+import _credentials
 import social_media_stream_pb2 as grpc_message_type
 import social_media_stream_pb2_grpc as grpc_stubs
+from interceptor.grpc_client_auth_interceptor import AuthGateway
+from interceptor.grpc_client_circuit_breaker import CircuitBreakerClientInterceptor
+from interceptor.grpc_client_retry_handler import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
 
 
-class GrpcClient:
+class GrpcResilientClient:
 
-    def __init__(self, auth_enabled=False):
+    def __init__(self):
         log.basicConfig(level=log.INFO, format='%(funcName)s - %(levelname)s - %(message)s')
-        if auth_enabled:
-            interceptors = [grpc_auth_client_interceptor.GrpcAuthClientInterceptor()]
-            self.channel = grpc.intercept_channel(grpc.insecure_channel('localhost:9030'), *interceptors)
-            self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
-        else:
-            self.channel = grpc.insecure_channel('localhost:9030')
-            self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
+        call_credentials = grpc.metadata_call_credentials(
+            AuthGateway(), name="auth gateway"
+        )
+        # # Channel credential will be valid for the entire channel
+        channel_credential = grpc.ssl_channel_credentials(
+            _credentials.ROOT_CERTIFICATE
+        )
+        # # Combining channel credentials and call credentials together
+        composite_credentials = grpc.composite_channel_credentials(
+            channel_credential,
+            call_credentials,
+        )
+        interceptors = [
+            RetryOnRpcErrorClientInterceptor(
+                max_attempts=3, sleeping_policy=ExponentialBackoff(init_backoff_ms=500, max_backoff_ms=4_000, multiplier=2),
+                status_for_retry=(grpc.StatusCode.CANCELLED,)),
+            CircuitBreakerClientInterceptor()
+        ]
+        secure_channel = grpc.secure_channel('localhost:9030', composite_credentials)
+        self.channel = grpc.intercept_channel(secure_channel, *interceptors)
+        self.stub = grpc_stubs.SocialMediaStreamServiceStub(self.channel)
 
     def _receive_stream_request(self, provider_name='40_tonn', quality='4k'):
         return grpc_message_type.WatchStreamRequest(provider_name=provider_name, quality=quality)
@@ -74,10 +92,12 @@ class GrpcClient:
     def watch_stream(self):
         request = self._receive_stream_request()
         log.info('Sending request to watch stream from %s using quality %s', request.provider_name, request.quality)
+        # responses = self.stub.watchStream(request, wait_for_ready=True, timeout=7)
         responses = self.stub.watchStream(request)
         for response in responses:
             # Wow! Python can return tuple of few variables and use it next way to paste them into log!
             log.info('40_tonn showed %s and said: %s. Very wise!' % self._from_proto_stream(response))
+        log.info('Watch stream has ended')
 
     def start_stream(self):
         response = self.stub.startStream(self._generate_stream_data())
@@ -91,15 +111,23 @@ class GrpcClient:
 
 if __name__ == '__main__':
     # run auth client
-    auth_client = GrpcClient(auth_enabled=True)
+    auth_client = GrpcResilientClient()
+    try:
+        auth_client.download_stream()
+    except Exception as e:
+        print(f"Expected error in download stream method (circuit breaker should be opened): {e}")
+    time.sleep(6)
+
     auth_client.download_stream()
+    time.sleep(6)
+
     auth_client.watch_stream()
+    time.sleep(6)
+
+    try:
+        auth_client.start_stream()
+    except Exception as e:
+        print(f"Expected error in start stream method (circuit breaker should be opened): {e}")
+    time.sleep(6)
     auth_client.start_stream()
     auth_client.join_interact_stream()
-
-    # run no auth client
-    client = GrpcClient(auth_enabled=False)
-    client.download_stream()
-    client.watch_stream()
-    client.start_stream()
-    client.join_interact_stream()

@@ -11,7 +11,7 @@
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <modules>
-        <module>server</module>
+        <module>java</module>
     </modules>
 
     <properties>
@@ -52,7 +52,7 @@
                                     <executable>bash</executable>
                                     <workingDirectory>${project.basedir}</workingDirectory>
                                     <commandlineArgs>
-                                        -c "export JWT_SECRET=L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0=; java -jar server/target/server-1.0-SNAPSHOT.jar &amp; python client/grpc_client.py"
+                                        -c "export JWT_SECRET=L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0=; java -jar java/target/java-1.0-SNAPSHOT.jar &amp; python python/grpc_client.py"
                                     </commandlineArgs>
                                 </configuration>
                             </execution>
@@ -80,7 +80,7 @@
                         <configuration>
                             <!-- install Python requirements -->
                             <executable>bash</executable>
-                            <workingDirectory>${project.basedir}/client</workingDirectory>
+                            <workingDirectory>${project.basedir}/python</workingDirectory>
                             <commandlineArgs>
                                 -c "python -m venv venv &amp;&amp; source venv/bin/activate &amp;&amp; pip install -r requirements.txt"
                             </commandlineArgs>
@@ -98,8 +98,8 @@
                             <workingDirectory>${project.basedir}</workingDirectory>
                             <commandlineArgs>
                                 -c "from grpc_tools import protoc;\
-                                protoc.main(['', '--python_out=client', '--grpc_python_out=client',
-                                '--proto_path=server/src/main/proto', 'social-media-stream.proto'])"
+                                protoc.main(['', '--python_out=python', '--grpc_python_out=python',
+                                '--proto_path=java/src/main/proto', 'social-media-stream.proto'])"
                             </commandlineArgs>
                         </configuration>
                     </execution>

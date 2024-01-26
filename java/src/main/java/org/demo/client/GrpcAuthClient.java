@@ -2,6 +2,7 @@ package org.demo.client;
 
 import java.util.Iterator;
 
+import org.demo.interceptor.ClientJwtInterceptor;
 import org.demo.server.AudioChunk;
 import org.demo.server.InteractStreamUpdate;
 import org.demo.server.SocialMediaStreamServiceGrpc;
@@ -11,6 +12,8 @@ import org.demo.server.VideoFrame;
 import org.demo.server.WatchStreamRequest;
 
 import io.grpc.Channel;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +26,12 @@ import static com.google.protobuf.ByteString.copyFrom;
 
 @Slf4j
 @RequiredArgsConstructor
-public class SocialMediaStreamClient {
+public class GrpcAuthClient {
 
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceBlockingStub blockingStub;
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceStub nonBlockingStub;
 
-    public SocialMediaStreamClient(Channel channel) {
+    public GrpcAuthClient(Channel channel) {
         this.blockingStub = SocialMediaStreamServiceGrpc.newBlockingStub(channel);
         this.nonBlockingStub = SocialMediaStreamServiceGrpc.newStub(channel);
     }
@@ -135,6 +138,19 @@ public class SocialMediaStreamClient {
         } catch (StatusRuntimeException e) {
             log.error("RPC failed: {}", e.getStatus());
         }
+    }
+
+    public static void main(String[] args) {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9030)
+            .usePlaintext()
+            .intercept(new ClientJwtInterceptor())
+            .build();
+        GrpcAuthClient client = new GrpcAuthClient(channel);
+        client.downloadStream();
+        client.watchStream();
+        client.startStream();
+        client.joinInteractStream();
+        channel.shutdown();
     }
 
 }

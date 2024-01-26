@@ -1,4 +1,4 @@
-package org.demo.config;
+package org.demo.interceptor;
 
 import io.grpc.Context;
 import io.grpc.Contexts;
@@ -15,7 +15,7 @@ import io.jsonwebtoken.Jwts;
 
 import static io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
-public class JwtInterceptor implements ServerInterceptor {
+public class ServerJwtInterceptor implements ServerInterceptor {
 
     private static final String BEARER_TYPE = "Bearer";
     private static final Metadata.Key<String> AUTHORIZATION_METADATA_KEY = Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER);
@@ -28,7 +28,7 @@ public class JwtInterceptor implements ServerInterceptor {
         String value = headers.get(AUTHORIZATION_METADATA_KEY);
 
         Status status;
-        if (shouldAuthenticate(value)) {
+//        if (shouldAuthenticate(value)) {
             try {
                 String token = value.substring(BEARER_TYPE.length()).trim();
                 Jws<Claims> claims = parser.parseClaimsJws(token);
@@ -40,9 +40,9 @@ public class JwtInterceptor implements ServerInterceptor {
             call.close(status, headers);
             return new ServerCall.Listener<ReqT>() {
             };
-        } else {
-            return next.startCall(call, headers);
-        }
+//        } else {
+//            return next.startCall(call, headers);
+//        }
     }
 
     private boolean shouldAuthenticate(String authHeaderValue) {

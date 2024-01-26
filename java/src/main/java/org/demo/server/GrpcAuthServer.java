@@ -1,11 +1,15 @@
 package org.demo.server;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.demo.interceptor.ServerJwtInterceptor;
 import org.demo.mapper.SocialMediaStreamMapper;
 
+import io.grpc.Server;
+import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,7 +20,7 @@ import static org.demo.mapper.SocialMediaStreamMapper.fromProtoStreamUpdate;
 import static com.google.protobuf.ByteString.copyFrom;
 
 @Slf4j
-public class SocialMediaStreamServer extends SocialMediaStreamServiceGrpc.SocialMediaStreamServiceImplBase {
+public class GrpcAuthServer extends SocialMediaStreamServiceGrpc.SocialMediaStreamServiceImplBase {
 
     @Override
     public void downloadStream(WatchStreamRequest request, StreamObserver<Recording> responseObserver) {
@@ -111,5 +115,16 @@ public class SocialMediaStreamServer extends SocialMediaStreamServiceGrpc.Social
                 responseObserver.onCompleted();
             }
         };
+    }
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+        Server server = ServerBuilder.forPort(9030)
+            .addService(new GrpcAuthServer())
+            .intercept(new ServerJwtInterceptor())
+            .build();
+        server.start();
+        server.awaitTermination();
+//        Thread.sleep(10_000);
+//        server.shutdownNow();
     }
 }
