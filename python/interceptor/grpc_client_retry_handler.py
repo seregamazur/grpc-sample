@@ -60,7 +60,6 @@ class RetryOnRpcErrorClientInterceptor(
                 # If status code is not in retryable status codes
                 if self.status_for_retry and response.code() not in self.status_for_retry:
                     return response
-
                 self.sleeping_policy.sleep(try_i)
             else:
                 return response

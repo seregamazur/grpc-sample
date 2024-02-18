@@ -1,6 +1,9 @@
 package org.demo.client;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.demo.interceptor.ClientJwtInterceptor;
 import org.demo.server.AudioChunk;
@@ -11,13 +14,19 @@ import org.demo.server.StreamUpdate;
 import org.demo.server.VideoFrame;
 import org.demo.server.WatchStreamRequest;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import io.grpc.Channel;
+import io.grpc.ChannelCredentials;
+import io.grpc.Grpc;
 import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import io.grpc.StatusRuntimeException;
+import io.grpc.TlsChannelCredentials;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import static org.demo.mapper.SocialMediaStreamMapper.fromProtoInteractStreamUpdate;
 import static org.demo.mapper.SocialMediaStreamMapper.fromProtoStreamUpdate;
@@ -26,12 +35,12 @@ import static com.google.protobuf.ByteString.copyFrom;
 
 @Slf4j
 @RequiredArgsConstructor
-public class GrpcAuthClient {
+public class GrpcResilientClient {
 
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceBlockingStub blockingStub;
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceStub nonBlockingStub;
 
-    public GrpcAuthClient(Channel channel) {
+    public GrpcResilientClient(Channel channel) {
         this.blockingStub = SocialMediaStreamServiceGrpc.newBlockingStub(channel);
         this.nonBlockingStub = SocialMediaStreamServiceGrpc.newStub(channel);
     }
@@ -140,12 +149,24 @@ public class GrpcAuthClient {
         }
     }
 
-    public static void main(String[] args) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9030)
-            .usePlaintext()
+    static Map<String, ?> getRetryingServiceConfig() throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+
+        return mapper.readValue(new InputStreamReader(
+            GrpcResilientClient.class.getClassLoader().getResourceAsStream("retrying_config.json"), UTF_8), Map.class);
+    }
+
+    public static void main(String[] args) throws IOException {
+        ChannelCredentials tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
+                GrpcResilientClient.class.getClassLoader().getResourceAsStream("tls_credentials/root.crt"))
+            .build();
+        Map<String, ?> serviceConfig = getRetryingServiceConfig();
+        ManagedChannel channel = Grpc.newChannelBuilderForAddress("localhost", 9030, tlsChannelCredentials)
+            .defaultServiceConfig(serviceConfig)
+            .enableRetry()
             .intercept(new ClientJwtInterceptor())
             .build();
-        GrpcAuthClient client = new GrpcAuthClient(channel);
+        GrpcResilientClient client = new GrpcResilientClient(channel);
         client.downloadStream();
         client.watchStream();
         client.startStream();

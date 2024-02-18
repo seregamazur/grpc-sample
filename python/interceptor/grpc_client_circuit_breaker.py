@@ -8,14 +8,14 @@ import grpc
 class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.UnaryStreamClientInterceptor,
                                       grpc.StreamUnaryClientInterceptor,
                                       grpc.StreamStreamClientInterceptor):
-    FAILURE_THRESHOLD = 3
-    RECOVERY_TIMEOUT = 5
     CLOSED = 'CLOSED'
     OPENED = 'OPENED'
     HALF_OPENED = 'HALF_OPENED'
 
-    def __init__(self):
+    def __init__(self, failure_threshold, recovery_timeout):
         log.basicConfig(level=log.INFO, format='%(levelname)s - %(_failure_threshold) - %(message)s')
+        self._failure_threshold = failure_threshold
+        self._recovery_timeout = recovery_timeout
         self._failure_count = 0
         self._state = self.CLOSED
         self._recovery_time = time.time()
@@ -27,7 +27,7 @@ class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.Una
 
     @failure_count.setter
     def failure_count(self, new_value):
-        if new_value == self.FAILURE_THRESHOLD:
+        if new_value == self._failure_threshold:
             self.state = self.OPENED
             self._failure_count = 0
         elif new_value > self._failure_count and self._state == self.HALF_OPENED:
@@ -46,7 +46,7 @@ class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.Una
         self._state = new_value
         log.info('Circuit breaker is now %s!', new_value)
         if new_value == self.OPENED:
-            self._recovery_time = time.time() + self.RECOVERY_TIMEOUT
+            self._recovery_time = time.time() + self._recovery_timeout
         elif new_value == self.CLOSED:
             self.failure_count = 0
 

@@ -5,11 +5,6 @@ import grpc
 import jwt
 from grpc_interceptor.exceptions import GrpcException
 
-'''
-Unary RPC server and Streaming RPC server handled in different way.
-In order to unify both interceptors in 1 file we need to handle the unary case and streaming case separately (intercept & _intercept_streaming)
-'''
-
 
 class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
 
@@ -17,9 +12,9 @@ class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
         response = self.verify_jwt(continuation, handler_call_details)
         return response
 
-    def intercept(self, method, request, context, method_name):
+    def intercept(self, continuation, call_details, context):
         # Call the RPC. It could be either unary or streaming
-        response_or_iterator = self.verify_jwt(context, method, request)
+        response_or_iterator = self.verify_jwt(continuation, call_details)
         if hasattr(response_or_iterator, "__iter__"):
             # Now we know it's a server streaming RPC, so the actual RPC method
             # hasn't run yet. Delegate to a helper to iterate over it so it runs.

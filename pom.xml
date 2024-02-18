@@ -12,6 +12,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>java</module>
+        <module>kotlin</module>
     </modules>
 
     <properties>
@@ -52,7 +53,8 @@
                                     <executable>bash</executable>
                                     <workingDirectory>${project.basedir}</workingDirectory>
                                     <commandlineArgs>
-                                        -c "export JWT_SECRET=L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0=; java -jar java/target/java-1.0-SNAPSHOT.jar &amp; python python/grpc_client.py"
+                                        -c "export JWT_SECRET=L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0=; java -jar
+                                        java/target/java-1.0-SNAPSHOT.jar &amp; python python/grpc_client.py"
                                     </commandlineArgs>
                                 </configuration>
                             </execution>

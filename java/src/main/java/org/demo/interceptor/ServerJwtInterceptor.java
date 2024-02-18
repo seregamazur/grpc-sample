@@ -28,7 +28,6 @@ public class ServerJwtInterceptor implements ServerInterceptor {
         String value = headers.get(AUTHORIZATION_METADATA_KEY);
 
         Status status;
-//        if (shouldAuthenticate(value)) {
             try {
                 String token = value.substring(BEARER_TYPE.length()).trim();
                 Jws<Claims> claims = parser.parseClaimsJws(token);
@@ -40,13 +39,7 @@ public class ServerJwtInterceptor implements ServerInterceptor {
             call.close(status, headers);
             return new ServerCall.Listener<ReqT>() {
             };
-//        } else {
-//            return next.startCall(call, headers);
-//        }
     }
 
-    private boolean shouldAuthenticate(String authHeaderValue) {
-        return !StringUtil.isNullOrEmpty(authHeaderValue) && authHeaderValue.startsWith(BEARER_TYPE);
-    }
 }
 

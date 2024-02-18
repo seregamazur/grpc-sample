@@ -7,13 +7,11 @@ import _credentials
 import social_media_stream_pb2
 import social_media_stream_pb2_grpc
 from interceptor import grpc_server_auth_interceptor
-from server.grpc_auth_server import GrpcAuthServer
 
 
 class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceServicer):
 
     def __init__(self):
-        self.original_server = GrpcAuthServer()
         self.failure_counts = {
             "downloadStream": 0,
             "watchStream": 0,
@@ -32,7 +30,7 @@ class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceSe
             context.set_details('SIMULATION')
             return social_media_stream_pb2.Recording()
         else:
-            return self.original_server.downloadStream(request, context)
+            return social_media_stream_pb2.Recording(data=b'Recording Data')
 
     def watchStream(self, request, context):
         if self.simulate_failure(2, "watchStream"):
@@ -42,7 +40,10 @@ class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceSe
             context.set_details('SIMULATION')
             return social_media_stream_pb2.StreamUpdate()
         else:
-            return self.original_server.watchStream(request, context)
+            for i in range(3):
+                log.info(f'Returned response {i} to watch stream...')
+                yield social_media_stream_pb2.StreamUpdate(audio_chunk=social_media_stream_pb2.AudioChunk(audio_data=f'Audio{i}'.encode()),
+                                                           video_frame=social_media_stream_pb2.VideoFrame(frame_data=f'Video{i}'.encode()))
 
     def startStream(self, request_iterator, context):
         log.info('Received request from client to start stream...')
@@ -52,7 +53,19 @@ class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceSe
             context.set_details('SIMULATION')
             return social_media_stream_pb2.StartStreamResponse()
         else:
-            return self.original_server.startStream(request_iterator, context)
+            updates = []
+        try:
+            for stream_update in request_iterator:
+                log.info(f'Got audio and video from client stream: {stream_update}')
+                updates.append(stream_update)
+        except grpc.RpcError as e:
+            log.error(f'An error occurred while trying to get audio and video: {e}')
+
+        log.info('Client stream has finally ended...')
+
+        message = f'We got your words from the stream! They are:{updates}'
+
+        return social_media_stream_pb2.StartStreamResponse(message=message)
 
     def joinInteractStream(self, request_iterator, context):
         log.info('Received request to join interact stream...')
@@ -60,7 +73,23 @@ class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceSe
             self.failure_counts["joinInteractStream"] += 1
             context.abort(grpc.StatusCode.CANCELLED, "Simulated failure for joinInteractStream")
         else:
-            return self.original_server.joinInteractStream(request_iterator, context)
+            try:
+                for stream_update in request_iterator:
+                    log.info(f'Got audio and video from client during interact stream: {stream_update}')
+                    if 'Hey' == stream_update.audio_chunk:
+                        yield social_media_stream_pb2.InteractStreamUpdate(
+                            audio_chunk=social_media_stream_pb2.AudioChunk(audio_data=b'Hey! How are you doing?'),
+                            video_frame=social_media_stream_pb2.VideoFrame(frame_data=b'ServerMuzzle')
+                        )
+            except grpc.RpcError as e:
+                log.error(f'An error occurred while trying to get audio and video: {e}')
+
+            log.info('Interact stream has finally ended...')
+
+            return social_media_stream_pb2.InteractStreamUpdate(
+                audio_chunk=social_media_stream_pb2.AudioChunk(audio_data=b'It was a pleasure talking to you. Bye!'),
+                video_frame=social_media_stream_pb2.VideoFrame(frame_data=b'ServerMuzzle')
+            )
 
 
 def serve():
