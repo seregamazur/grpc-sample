@@ -15,24 +15,6 @@
         <module>kotlin</module>
     </modules>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <dropwizard.version>3.0.4</dropwizard.version>
-    </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>io.dropwizard</groupId>
-                <artifactId>dropwizard-dependencies</artifactId>
-                <version>${dropwizard.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <profiles>
         <profile>
             <id>run-server-and-client</id>
@@ -65,9 +47,9 @@
         </profile>
     </profiles>
 
-
     <build>
         <plugins>
+            <!-- install python env and generate protobuf sources for python-->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -82,7 +64,7 @@
                         <configuration>
                             <!-- install Python requirements -->
                             <executable>bash</executable>
-                            <workingDirectory>${project.basedir}/python</workingDirectory>
+                            <workingDirectory>${session.executionRootDirectory}/python</workingDirectory>
                             <commandlineArgs>
                                 -c "python -m venv venv &amp;&amp; source venv/bin/activate &amp;&amp; pip install -r requirements.txt"
                             </commandlineArgs>
@@ -97,11 +79,11 @@
                         <configuration>
                             <!-- generate Python files from proto -->
                             <executable>python</executable>
-                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <workingDirectory>${session.executionRootDirectory}</workingDirectory>
                             <commandlineArgs>
                                 -c "from grpc_tools import protoc;\
                                 protoc.main(['', '--python_out=python', '--grpc_python_out=python',
-                                '--proto_path=java/src/main/proto', 'social-media-stream.proto'])"
+                                '--proto_path=proto', 'social-media-stream.proto'])"
                             </commandlineArgs>
                         </configuration>
                     </execution>
@@ -109,5 +91,100 @@
             </plugin>
         </plugins>
     </build>
+
+    <dependencies>
+        <!-- grpc related -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+            <version>1.60.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-protobuf</artifactId>
+            <version>1.60.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-api</artifactId>
+            <version>1.60.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-stub</artifactId>
+            <version>1.60.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.annotation</groupId>
+            <artifactId>javax.annotation-api</artifactId>
+            <version>1.3.2</version>
+        </dependency>
+
+        <!-- jwt related -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+            <version>0.12.5</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
+            <version>0.12.5</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.2.7</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.2.5-b10</version>
+        </dependency>
+
+        <!-- json mapper -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.16.1</version>
+        </dependency>
+
+        <!-- logging -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.28</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.26</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.7.26</version>
+        </dependency>
+
+        <!-- server tls -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.77</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.77</version>
+        </dependency>
+    </dependencies>
 
 </project>

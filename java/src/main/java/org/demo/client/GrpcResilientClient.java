@@ -2,6 +2,8 @@ package org.demo.client;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -36,6 +38,9 @@ import static com.google.protobuf.ByteString.copyFrom;
 @Slf4j
 @RequiredArgsConstructor
 public class GrpcResilientClient {
+
+    private static final String RETRY_CONFIG = "retrying_config.json";
+    private static final String TLS_CRT = "tls_credentials/root.crt";
 
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceBlockingStub blockingStub;
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceStub nonBlockingStub;
@@ -153,12 +158,12 @@ public class GrpcResilientClient {
         ObjectMapper mapper = new ObjectMapper();
 
         return mapper.readValue(new InputStreamReader(
-            GrpcResilientClient.class.getClassLoader().getResourceAsStream("retrying_config.json"), UTF_8), Map.class);
+            Files.newInputStream(Paths.get(RETRY_CONFIG)), UTF_8), Map.class);
     }
 
     public static void main(String[] args) throws IOException {
         ChannelCredentials tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
-                GrpcResilientClient.class.getClassLoader().getResourceAsStream("tls_credentials/root.crt"))
+                Files.newInputStream(Paths.get(TLS_CRT)))
             .build();
         Map<String, ?> serviceConfig = getRetryingServiceConfig();
         ManagedChannel channel = Grpc.newChannelBuilderForAddress("localhost", 9030, tlsChannelCredentials)

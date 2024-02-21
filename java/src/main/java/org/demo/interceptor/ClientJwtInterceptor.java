@@ -1,8 +1,7 @@
 package org.demo.interceptor;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
-
-import javax.crypto.spec.SecretKeySpec;
 
 import io.grpc.CallOptions;
 import io.grpc.Channel;
@@ -12,7 +11,7 @@ import io.grpc.ForwardingClientCall;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 
 
 public class ClientJwtInterceptor implements ClientInterceptor {
@@ -35,11 +34,10 @@ public class ClientJwtInterceptor implements ClientInterceptor {
     }
 
     private String getJwtValue() {
-        Key secretKey = new SecretKeySpec(System.getenv("JWT_SECRET").getBytes(),
-            SignatureAlgorithm.HS256.getJcaName());
+        Key secretKey = Keys.hmacShaKeyFor(System.getenv("JWT_SECRET").getBytes(StandardCharsets.UTF_8));
         return "Bearer " + Jwts.builder()
-            .setSubject("java-client")
-            .signWith(SignatureAlgorithm.HS256, secretKey)
+            .subject("java-client")
+            .signWith(secretKey)
             .compact();
     }
 

@@ -1,6 +1,8 @@
 package org.demo.server;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,10 +26,13 @@ import static com.google.protobuf.ByteString.copyFrom;
 @Slf4j
 public class GrpcCrashingServer extends SocialMediaStreamServiceGrpc.SocialMediaStreamServiceImplBase {
 
-    AtomicInteger downloadStreamFails = new AtomicInteger();
-    AtomicInteger watchStreamFails = new AtomicInteger();
-    AtomicInteger startStreamFails = new AtomicInteger();
-    AtomicInteger joinInteractStreamFails = new AtomicInteger();
+    private static final String TLS_CRT = "tls_credentials/localhost.crt";
+    private static final String TLS_KEY = "tls_credentials/localhost.key";
+
+    private final AtomicInteger downloadStreamFails = new AtomicInteger();
+    private final AtomicInteger watchStreamFails = new AtomicInteger();
+    private final AtomicInteger startStreamFails = new AtomicInteger();
+    private final AtomicInteger joinInteractStreamFails = new AtomicInteger();
 
     @Override
     public void downloadStream(WatchStreamRequest request, StreamObserver<Recording> responseObserver) {
@@ -174,14 +179,12 @@ public class GrpcCrashingServer extends SocialMediaStreamServiceGrpc.SocialMedia
 
     public static void main(String[] args) throws InterruptedException, IOException {
         Server server = ServerBuilder.forPort(9030)
-            .useTransportSecurity(GrpcCrashingServer.class.getClassLoader().getResourceAsStream("tls_credentials/localhost.crt"),
-                GrpcCrashingServer.class.getClassLoader().getResourceAsStream("tls_credentials/localhost.key"))
+            .useTransportSecurity(Files.newInputStream(Paths.get(TLS_CRT)), Files.newInputStream(Paths.get(TLS_KEY)))
             .addService(new GrpcCrashingServer())
             .intercept(new ServerJwtInterceptor())
             .build();
         server.start();
-        server.awaitTermination();
-//        Thread.sleep(10_000);
-//        server.shutdownNow();
+        Thread.sleep(10_000);
+        server.shutdownNow();
     }
 }

@@ -9,6 +9,7 @@ import io.grpc.ServerCallHandler
 import io.grpc.ServerInterceptor
 import io.grpc.Status
 import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.security.Keys
 
 class ServerJwtInterceptor : ServerInterceptor {
 
@@ -17,7 +18,7 @@ class ServerJwtInterceptor : ServerInterceptor {
 
         private val AUTHORIZATION_METADATA_KEY = Metadata.Key.of("Authorization", ASCII_STRING_MARSHALLER)
         private val CLIENT_ID_CONTEXT_KEY: Context.Key<String> = Context.key("clientId")
-        private val parser = Jwts.parser().setSigningKey(System.getenv("JWT_SECRET").toByteArray())
+        private val parser = Jwts.parser().verifyWith(Keys.hmacShaKeyFor(System.getenv("JWT_SECRET").toByteArray())).build()
     }
 
     override fun <ReqT : Any?, RespT : Any?> interceptCall(
@@ -30,8 +31,8 @@ class ServerJwtInterceptor : ServerInterceptor {
         val status: Status
         try {
             val token = value?.substring(BEARER_TYPE.length)?.trim()
-            val claims = parser.parseClaimsJws(token)
-            val ctx = Context.current().withValue(CLIENT_ID_CONTEXT_KEY, claims.body.subject)
+            val claims = parser.parseSignedClaims(token)
+            val ctx = Context.current().withValue(CLIENT_ID_CONTEXT_KEY, claims.payload.subject)
             return Contexts.interceptCall(ctx, call, headers, next)
         } catch (e: Exception) {
             status = Status.UNAUTHENTICATED.withDescription(e.message).withCause(e)

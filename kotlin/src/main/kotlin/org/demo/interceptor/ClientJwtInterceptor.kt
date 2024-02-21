@@ -1,4 +1,4 @@
-package org.demo.org.demo.interceptor
+package org.demo.interceptor
 
 import io.grpc.CallOptions
 import io.grpc.Channel
@@ -7,8 +7,8 @@ import io.grpc.ClientInterceptor
 import io.grpc.ForwardingClientCall
 import io.grpc.MethodDescriptor
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
-import javax.crypto.spec.SecretKeySpec
+import io.jsonwebtoken.security.Keys
+import java.nio.charset.StandardCharsets
 
 class ClientJwtInterceptor : ClientInterceptor {
 
@@ -33,13 +33,10 @@ class ClientJwtInterceptor : ClientInterceptor {
     }
 
     fun getJwtValue(): String {
-        val secretKey = SecretKeySpec(
-            System.getenv("JWT_SECRET").toByteArray(),
-            SignatureAlgorithm.HS256.jcaName
-        )
+        val secretKey = Keys.hmacShaKeyFor(System.getenv("JWT_SECRET").toByteArray(StandardCharsets.UTF_8))
         return "Bearer " + Jwts.builder()
-            .setSubject("kotlin-client")
-            .signWith(SignatureAlgorithm.HS256, secretKey)
+            .subject("kotlin-client")
+            .signWith(secretKey)
             .compact()
     }
 

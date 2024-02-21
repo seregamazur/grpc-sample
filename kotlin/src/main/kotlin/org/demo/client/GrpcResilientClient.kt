@@ -10,7 +10,7 @@ import io.grpc.TlsChannelCredentials
 import io.grpc.stub.StreamObserver
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoInteractStreamUpdate
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoStreamUpdate
-import org.demo.org.demo.interceptor.ClientJwtInterceptor
+import org.demo.interceptor.ClientJwtInterceptor
 import org.demo.server.AudioChunk
 import org.demo.server.InteractStreamUpdate
 import org.demo.server.SocialMediaStreamServiceGrpc
@@ -19,8 +19,8 @@ import org.demo.server.StreamUpdate
 import org.demo.server.VideoFrame
 import org.demo.server.WatchStreamRequest
 import org.slf4j.LoggerFactory
-import java.io.InputStreamReader
-import kotlin.text.Charsets.UTF_8
+import java.nio.file.Files
+import java.nio.file.Paths
 
 class GrpcResilientClient(channel: Channel) {
 
@@ -138,23 +138,22 @@ class GrpcResilientClient(channel: Channel) {
 }
 
 fun getRetryingServiceConfig(): Map<String, Any> {
-    val mapper = ObjectMapper()
-
-    return mapper.readValue(
-        InputStreamReader(
-            GrpcResilientClient.Companion::class.java.classLoader.getResourceAsStream("retrying_config.json")!!, UTF_8
-        ), object : TypeReference<Map<String, Any>>() {}
+    return ObjectMapper().readValue(
+        Files.newInputStream(Paths.get("retrying_config.json")),
+        object : TypeReference<Map<String, Any>>() {}
     )
 }
 
 fun main() {
     val tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
-        GrpcResilientClient.Companion::class.java.classLoader.getResourceAsStream("tls_credentials/root.crt")
+        Files.newInputStream(Paths.get("tls_credentials/root.crt"))
     )
         .build()
-    val serviceConfig: Map<String, Any> = getRetryingServiceConfig()
+
+    val retryServiceConfig: Map<String, Any> = getRetryingServiceConfig()
+
     val channel = Grpc.newChannelBuilderForAddress("localhost", 9030, tlsChannelCredentials)
-        .defaultServiceConfig(serviceConfig)
+        .defaultServiceConfig(retryServiceConfig)
         .enableRetry()
         .intercept(ClientJwtInterceptor())
         .build()

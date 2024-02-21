@@ -11,6 +11,8 @@ import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoAudioChunk
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoInteractStreamUpdate
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoStreamUpdate
 import org.slf4j.LoggerFactory
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors
 
@@ -174,8 +176,8 @@ class GrpcCrashingServer : SocialMediaStreamServiceGrpc.SocialMediaStreamService
 fun main() {
     val server = ServerBuilder.forPort(9030)
         .useTransportSecurity(
-            GrpcCrashingServer.Companion::class.java.classLoader.getResourceAsStream("tls_credentials/localhost.crt"),
-            GrpcCrashingServer.Companion::class.java.classLoader.getResourceAsStream("tls_credentials/localhost.key")
+            Files.newInputStream(Paths.get("tls_credentials/localhost.crt")),
+            Files.newInputStream(Paths.get("tls_credentials/localhost.key"))
         )
         .addService(GrpcCrashingServer())
         .intercept(ServerJwtInterceptor())

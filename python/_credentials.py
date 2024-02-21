@@ -7,6 +7,6 @@ def _load_credential_from_file(filepath):
         return f.read()
 
 
-SERVER_CERTIFICATE = _load_credential_from_file("tls_credentials/localhost.crt")
-SERVER_CERTIFICATE_KEY = _load_credential_from_file("tls_credentials/localhost.key")
-ROOT_CERTIFICATE = _load_credential_from_file("tls_credentials/root.crt")
+SERVER_CERTIFICATE = _load_credential_from_file("../tls_credentials/localhost.crt")
+SERVER_CERTIFICATE_KEY = _load_credential_from_file("../tls_credentials/localhost.key")
+ROOT_CERTIFICATE = _load_credential_from_file("../tls_credentials/root.crt")
