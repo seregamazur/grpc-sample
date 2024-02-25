@@ -1,5 +1,4 @@
 import logging as log
-import time
 
 import grpc
 
@@ -17,11 +16,12 @@ class GrpcResilientClient:
     def __init__(self):
         log.basicConfig(level=log.INFO, format='%(levelname)s - %(filename)s - %(message)s')
         tls_channel = self._create_tls_channel()
+        status_for_retry = [grpc.StatusCode.CANCELLED, grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.DEADLINE_EXCEEDED]
         interceptors = [
             RetryOnRpcErrorClientInterceptor(
                 max_attempts=3, sleeping_policy=ExponentialBackoff(init_backoff_ms=500, max_backoff_ms=4_000, multiplier=2),
-                status_for_retry=(grpc.StatusCode.CANCELLED,)),
-            CircuitBreakerClientInterceptor(failure_threshold=3, recovery_timeout=5)
+                status_for_retry=status_for_retry),
+            CircuitBreakerClientInterceptor(failure_threshold=3, recovery_timeout=5, status_for_retry=status_for_retry)
         ]
         # interceptor channel over the tls channel, so we take advantage from both
         self.channel = grpc.intercept_channel(tls_channel, *interceptors)
@@ -44,12 +44,12 @@ class GrpcResilientClient:
 
     def start_stream(self):
         log.info('Sending streaming requests...')
-        response = self.stub.startStream(_generate_stream_data(), wait_for_ready=True, timeout=2)
+        response = self.stub.startStream(_generate_stream_data(), wait_for_ready=True, timeout=5)
         log.info('Server response after streaming: %s', response.message)
 
     def join_interact_stream(self):
         log.info('Sending streaming requests interact...')
-        responses = self.stub.joinInteractStream(_generate_interact_stream_data(), wait_for_ready=True, timeout=2)
+        responses = self.stub.joinInteractStream(_generate_interact_stream_data(), wait_for_ready=True, timeout=5)
         for response in responses:
             log.info('Server response during interact streaming: %s', _from_proto_stream_update(response))
 
@@ -68,29 +68,14 @@ class GrpcResilientClient:
             call_credentials,
         )
 
-        tls_channel = grpc.secure_channel('localhost:9030', composite_credentials)
+        tls_channel = grpc.secure_channel('localhost:9030', composite_credentials, compression=grpc.Compression.Gzip)
         return tls_channel
 
 
 if __name__ == '__main__':
     # run auth client
     auth_client = GrpcResilientClient()
-    try:
-        auth_client.download_stream()
-    except Exception as e:
-        print(f"Expected error in download stream method (circuit breaker should be opened): {e}")
-    time.sleep(6)
-
     auth_client.download_stream()
-    time.sleep(6)
-
     auth_client.watch_stream()
-    time.sleep(6)
-
-    try:
-        auth_client.start_stream()
-    except Exception as e:
-        print(f"Expected error in start stream method (circuit breaker should be opened): {e}")
-    time.sleep(6)
     auth_client.start_stream()
     auth_client.join_interact_stream()

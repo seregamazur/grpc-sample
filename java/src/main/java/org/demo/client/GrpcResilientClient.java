@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.demo.interceptor.ClientJwtInterceptor;
 import org.demo.server.AudioChunk;
@@ -35,19 +37,23 @@ import static org.demo.mapper.SocialMediaStreamMapper.fromProtoStreamUpdate;
 
 import static com.google.protobuf.ByteString.copyFrom;
 
+
 @Slf4j
 @RequiredArgsConstructor
 public class GrpcResilientClient {
 
     private static final String RETRY_CONFIG = "retrying_config.json";
     private static final String TLS_CRT = "tls_credentials/root.crt";
+    private static final long CALL_DEADLINE = 5;
 
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceBlockingStub blockingStub;
-    private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceStub nonBlockingStub;
+
+    //only async stub can be used for streaming operations
+    private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceStub asyncStub;
 
     public GrpcResilientClient(Channel channel) {
         this.blockingStub = SocialMediaStreamServiceGrpc.newBlockingStub(channel);
-        this.nonBlockingStub = SocialMediaStreamServiceGrpc.newStub(channel);
+        this.asyncStub = SocialMediaStreamServiceGrpc.newStub(channel);
     }
 
     public void downloadStream() {
@@ -57,8 +63,8 @@ public class GrpcResilientClient {
 
         try {
             log.info("Sending request to download stream from {} using quality {}", request.getProviderName(), request.getQuality());
-            blockingStub.downloadStream(request);
-            log.info("Downloading stream...");
+            blockingStub.withDeadlineAfter(CALL_DEADLINE, TimeUnit.SECONDS).downloadStream(request);
+            log.info("Stream has been downloaded, data={}", request);
         } catch (StatusRuntimeException e) {
             log.error("RPC failed: {}", e.getStatus());
         }
@@ -72,18 +78,22 @@ public class GrpcResilientClient {
         Iterator<StreamUpdate> streamUpdateIterator;
         try {
             log.info("Sending request to watch stream from {} using quality {}", request.getProviderName(), request.getQuality());
-            streamUpdateIterator = blockingStub.watchStream(request);
+            streamUpdateIterator = blockingStub.withDeadlineAfter(CALL_DEADLINE, java.util.concurrent.TimeUnit.SECONDS).watchStream(request);
             while (streamUpdateIterator.hasNext()) {
                 StreamUpdate data = streamUpdateIterator.next();
                 log.info("40_tonn said: {}. Very wise!", fromProtoStreamUpdate(data));
             }
+            log.info("Watch stream has ended");
         } catch (StatusRuntimeException e) {
             log.error("RPC failed: {}", e.getStatus());
         }
     }
 
     public void startStream() {
-        StreamObserver<StartStreamResponse> responseObserver = new StreamObserver<StartStreamResponse>() {
+        //use CountDownLatch to wait for response from server (make it blocking)
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+
+        StreamObserver<StartStreamResponse> responseObserver = new StreamObserver<>() {
             @Override
             public void onNext(StartStreamResponse streamUpdate) {
                 log.info("Got message from the server regarding our stream: {}", streamUpdate.getMessage());
@@ -92,50 +102,62 @@ public class GrpcResilientClient {
             @Override
             public void onError(Throwable throwable) {
                 log.error("An error received while trying to stream...", throwable);
+                finishLatch.countDown();
             }
 
             @Override
             public void onCompleted() {
                 log.info("Server aware regarding the stream end...");
+                finishLatch.countDown();
             }
         };
 
-        StreamObserver<StreamUpdate> requestObserver = nonBlockingStub.startStream(responseObserver);
+        StreamObserver<StreamUpdate> requestObserver = asyncStub.withDeadlineAfter(CALL_DEADLINE, java.util.concurrent.TimeUnit.SECONDS).startStream(responseObserver);
 
         try {
-            log.info("Sending requests to stream...");
+            log.info("Sending streaming requests...");
             for (int i = 0; i < 3; i++) {
                 requestObserver.onNext(StreamUpdate.newBuilder()
                     .setAudioChunk(AudioChunk.newBuilder().setAudioData(copyFrom(("ClientAudio" + i).getBytes())))
                     .setVideoFrame(VideoFrame.newBuilder().setFrameData(copyFrom(("ClientVideo" + i).getBytes())))
                     .build());
             }
+            requestObserver.onCompleted();
+            if (!finishLatch.await(1, TimeUnit.SECONDS)) {
+                log.warn("The call did not finish within 1 second");
+            }
         } catch (StatusRuntimeException e) {
             log.error("RPC failed: {}", e.getStatus());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
     public void joinInteractStream() {
-        log.info("Sending request to server to join interact stream...");
-        StreamObserver<InteractStreamUpdate> responseObserver = new StreamObserver<InteractStreamUpdate>() {
+        log.info("Sending streaming requests interact...");
+        //use CountDownLatch to wait for response from server (make it blocking)
+        final CountDownLatch finishLatch = new CountDownLatch(1);
+        StreamObserver<InteractStreamUpdate> responseObserver = new StreamObserver<>() {
 
             @Override
             public void onNext(InteractStreamUpdate streamUpdate) {
-                log.info("Got audio and video from the server interact stream: {}",
+                log.info("Server response during interact streaming: {}",
                     fromProtoInteractStreamUpdate(streamUpdate));
             }
 
             @Override
             public void onError(Throwable throwable) {
                 log.error("An error received while trying to stream...", throwable);
+                finishLatch.countDown();
             }
 
             @Override
             public void onCompleted() {
                 log.info("Server aware regarding the stream end...");
+                finishLatch.countDown();
             }
         };
-        StreamObserver<InteractStreamUpdate> requestObserver = nonBlockingStub.joinInteractStream(responseObserver);
+        StreamObserver<InteractStreamUpdate> requestObserver = asyncStub.withDeadlineAfter(CALL_DEADLINE, java.util.concurrent.TimeUnit.SECONDS).joinInteractStream(responseObserver);
 
         try {
             requestObserver.onNext(InteractStreamUpdate.newBuilder()
@@ -149,8 +171,13 @@ public class GrpcResilientClient {
                     .build());
             }
             requestObserver.onCompleted();
+            if (!finishLatch.await(10, TimeUnit.SECONDS)) {
+                log.warn("The call did not finish within 1 second");
+            }
         } catch (StatusRuntimeException e) {
             log.error("RPC failed: {}", e.getStatus());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -162,6 +189,7 @@ public class GrpcResilientClient {
     }
 
     public static void main(String[] args) throws IOException {
+        //use secure channel with TLS certificates
         ChannelCredentials tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
                 Files.newInputStream(Paths.get(TLS_CRT)))
             .build();

@@ -7,12 +7,14 @@
         }
       ],
       "retryPolicy": {
-        "maxAttempts": "3",
+        "maxAttempts": "4",
         "initialBackoff": "0.5s",
         "maxBackoff": "5s",
         "backoffMultiplier": "2",
         "retryableStatusCodes": [
-          "UNAVAILABLE"
+          "UNAVAILABLE",
+          "CANCELLED",
+          "DEADLINE_EXCEEDED"
         ]
       }
     }

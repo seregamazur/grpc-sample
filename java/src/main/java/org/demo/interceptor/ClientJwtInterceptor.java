@@ -13,7 +13,9 @@ import io.grpc.MethodDescriptor;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-
+/**
+ * Intercept call before sending to server, append JWT and use compression
+ */
 public class ClientJwtInterceptor implements ClientInterceptor {
 
     private static final Metadata.Key<String> AUTHORIZATION_HEADER
@@ -21,8 +23,9 @@ public class ClientJwtInterceptor implements ClientInterceptor {
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> methodDescriptor, CallOptions callOptions, Channel channel) {
-        return new ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
-            channel.newCall(methodDescriptor, callOptions)) {
+        return new ForwardingClientCall.SimpleForwardingClientCall<>(
+            //add grpc-encoding=gzip header
+            channel.newCall(methodDescriptor, callOptions.withCompression("gzip"))) {
             @Override
             public void start(Listener<RespT> responseListener, Metadata headers) {
                 if (!headers.containsKey(AUTHORIZATION_HEADER)) {

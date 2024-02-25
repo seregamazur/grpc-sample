@@ -7,6 +7,7 @@ from grpc_interceptor.exceptions import GrpcException
 
 
 class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
+    clients = ["kotlin-client", "python-client", "java-client"]
 
     def intercept_service(self, continuation, handler_call_details):
         response = self.verify_jwt(continuation, handler_call_details)
@@ -31,7 +32,8 @@ class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
             bearer = headers.get('authorization')
 
             if bearer:
-                jwt.decode(bearer.split(' ')[1], key=os.environ.get('JWT_SECRET'), algorithms=['HS256'])
+                payload = jwt.decode(bearer.split(' ')[1], key=os.environ.get('JWT_SECRET'), algorithms=['HS256'])
+                assert payload.get('sub') in self.clients
 
             return continuation(call_details)
 

@@ -1,6 +1,6 @@
 import logging as log
 import time
-from typing import Any
+from typing import Any, List
 
 import grpc
 
@@ -12,13 +12,15 @@ class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.Una
     OPENED = 'OPENED'
     HALF_OPENED = 'HALF_OPENED'
 
-    def __init__(self, failure_threshold, recovery_timeout):
+    # TODO add list of exceptions that are allowed to make retry (deadline)
+    def __init__(self, failure_threshold: int, recovery_timeout: int, status_for_retry: List[grpc.StatusCode]):
         log.basicConfig(level=log.INFO, format='%(levelname)s - %(_failure_threshold) - %(message)s')
         self._failure_threshold = failure_threshold
         self._recovery_timeout = recovery_timeout
         self._failure_count = 0
         self._state = self.CLOSED
         self._recovery_time = time.time()
+        self.status_for_retry = status_for_retry
 
     @property
     def failure_count(self):
@@ -99,7 +101,7 @@ class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.Una
             for response in response:
                 yield response
         except grpc.RpcError as e:
-            if response.code() == grpc.StatusCode.CANCELLED:
+            if response.code() in self.status_for_retry:
                 self.failure_count += 1
                 return response
             elif self.state == self.HALF_OPENED:

@@ -21,7 +21,8 @@ class ClientJwtInterceptor : ClientInterceptor {
         channel: Channel?
     ): ClientCall<ReqT, RespT> {
         return object : ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT>(
-            channel?.newCall(methodDescriptor, callOptions)
+            //add grpc-encoding=gzip header
+            channel?.newCall(methodDescriptor, callOptions?.withCompression("gzip"))
         ) {
             override fun start(responseListener: Listener<RespT>, headers: io.grpc.Metadata) {
                 if (!headers.containsKey(authHeader)) {

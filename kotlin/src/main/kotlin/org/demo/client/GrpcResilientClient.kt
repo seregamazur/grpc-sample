@@ -8,9 +8,9 @@ import io.grpc.Grpc
 import io.grpc.StatusRuntimeException
 import io.grpc.TlsChannelCredentials
 import io.grpc.stub.StreamObserver
+import org.demo.interceptor.ClientJwtInterceptor
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoInteractStreamUpdate
 import org.demo.mapper.SocialMediaStreamMapper.Companion.fromProtoStreamUpdate
-import org.demo.interceptor.ClientJwtInterceptor
 import org.demo.server.AudioChunk
 import org.demo.server.InteractStreamUpdate
 import org.demo.server.SocialMediaStreamServiceGrpc
@@ -21,15 +21,21 @@ import org.demo.server.WatchStreamRequest
 import org.slf4j.LoggerFactory
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 class GrpcResilientClient(channel: Channel) {
 
     companion object {
         private val log = LoggerFactory.getLogger(GrpcResilientClient::class.java)
+        private const val CALL_DEADLINE: Long = 5
+
     }
 
     private val blockingStub = SocialMediaStreamServiceGrpc.newBlockingStub(channel)
-    private val nonBlockingStub = SocialMediaStreamServiceGrpc.newStub(channel)
+
+    //only async stub can be used for streaming operations
+    private val asyncStub = SocialMediaStreamServiceGrpc.newStub(channel)
 
     fun downloadStream() {
         val request = WatchStreamRequest.newBuilder()
@@ -38,7 +44,7 @@ class GrpcResilientClient(channel: Channel) {
 
         try {
             log.info("Sending request to download stream from {} using quality {}", request.getProviderName(), request.getQuality())
-            blockingStub.downloadStream(request)
+            blockingStub.withDeadlineAfter(CALL_DEADLINE, TimeUnit.SECONDS).downloadStream(request)
             log.info("Downloading stream...")
         } catch (e: StatusRuntimeException) {
             log.error("RPC failed: {}", e.status)
@@ -52,7 +58,8 @@ class GrpcResilientClient(channel: Channel) {
 
         try {
             log.info("Sending request to watch stream from {} using quality {}", request.getProviderName(), request.getQuality())
-            val streamUpdateIterator: Iterator<StreamUpdate> = blockingStub.watchStream(request)
+            val streamUpdateIterator: Iterator<StreamUpdate> =
+                blockingStub.withDeadlineAfter(CALL_DEADLINE, TimeUnit.SECONDS).watchStream(request)
             while (streamUpdateIterator.hasNext()) {
                 val data: StreamUpdate = streamUpdateIterator.next()
                 log.info("40_tonn said: {}. Very wise!", fromProtoStreamUpdate(data))
@@ -63,6 +70,8 @@ class GrpcResilientClient(channel: Channel) {
     }
 
     fun startStream() {
+        //use CountDownLatch to wait for response from server (make it blocking)
+        val finishLatch = CountDownLatch(1)
         val responseObserver = object : StreamObserver<StartStreamResponse> {
             override fun onNext(streamUpdate: StartStreamResponse) {
                 log.info("Got message from the server regarding our stream: {}", streamUpdate.getMessage())
@@ -70,14 +79,17 @@ class GrpcResilientClient(channel: Channel) {
 
             override fun onError(throwable: Throwable) {
                 log.error("An error received while trying to stream...", throwable)
+                finishLatch.countDown()
             }
 
             override fun onCompleted() {
                 log.info("Server aware regarding the stream end...")
+                finishLatch.countDown()
             }
         }
 
-        val requestObserver: StreamObserver<StreamUpdate> = nonBlockingStub.startStream(responseObserver)
+        val requestObserver: StreamObserver<StreamUpdate> =
+            asyncStub.withDeadlineAfter(CALL_DEADLINE, TimeUnit.SECONDS).startStream(responseObserver)
 
         try {
             log.info("Sending requests to stream...")
@@ -89,6 +101,10 @@ class GrpcResilientClient(channel: Channel) {
                         .build()
                 )
             }
+            requestObserver.onCompleted()
+            if (!finishLatch.await(1, TimeUnit.SECONDS)) {
+                println("The call did not finish within 1 second")
+            }
         } catch (e: StatusRuntimeException) {
             log.error("RPC failed: {}", e.status)
         }
@@ -96,6 +112,8 @@ class GrpcResilientClient(channel: Channel) {
 
     fun joinInteractStream() {
         log.info("Sending request to server to join interact stream...")
+        //use CountDownLatch to wait for response from server (make it blocking)
+        val finishLatch = CountDownLatch(1)
         val responseObserver = object : StreamObserver<InteractStreamUpdate> {
 
             override fun onNext(streamUpdate: InteractStreamUpdate) {
@@ -107,13 +125,15 @@ class GrpcResilientClient(channel: Channel) {
 
             override fun onError(throwable: Throwable) {
                 log.error("An error received while trying to stream...", throwable)
+                finishLatch.countDown()
             }
 
             override fun onCompleted() {
                 log.info("Server aware regarding the stream end...")
+                finishLatch.countDown()
             }
         }
-        val requestObserver = nonBlockingStub.joinInteractStream(responseObserver)
+        val requestObserver = asyncStub.withDeadlineAfter(CALL_DEADLINE, TimeUnit.SECONDS).joinInteractStream(responseObserver)
 
         try {
             requestObserver.onNext(
@@ -131,6 +151,9 @@ class GrpcResilientClient(channel: Channel) {
                 )
             }
             requestObserver.onCompleted()
+            if (!finishLatch.await(1, TimeUnit.SECONDS)) {
+                println("The call did not finish within 1 second")
+            }
         } catch (e: StatusRuntimeException) {
             log.error("RPC failed: {}", e.status)
         }
@@ -145,6 +168,7 @@ fun getRetryingServiceConfig(): Map<String, Any> {
 }
 
 fun main() {
+    //use secure channel with TLS certificates
     val tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
         Files.newInputStream(Paths.get("tls_credentials/root.crt"))
     )

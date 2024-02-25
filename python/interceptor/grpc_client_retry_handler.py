@@ -2,7 +2,7 @@ import abc
 import logging as log
 import time
 from random import randint
-from typing import Optional, Tuple
+from typing import List
 
 import grpc
 
@@ -42,7 +42,7 @@ class RetryOnRpcErrorClientInterceptor(
             *,
             max_attempts: int,
             sleeping_policy: SleepingPolicy,
-            status_for_retry: Optional[Tuple[grpc.StatusCode]] = None,
+            status_for_retry: List[grpc.StatusCode]
     ):
         self.max_attempts = max_attempts
         self.sleeping_policy = sleeping_policy
@@ -58,7 +58,7 @@ class RetryOnRpcErrorClientInterceptor(
                     return response
 
                 # If status code is not in retryable status codes
-                if self.status_for_retry and response.code() not in self.status_for_retry:
+                if response.code() not in self.status_for_retry:
                     return response
                 self.sleeping_policy.sleep(try_i)
             else:
@@ -74,7 +74,7 @@ class RetryOnRpcErrorClientInterceptor(
                     yield response
                 break
             except grpc.RpcError as e:
-                if (self.status_for_retry and response.code() not in self.status_for_retry) or try_i == self.max_attempts - 1:
+                if response.code() not in self.status_for_retry or try_i == self.max_attempts - 1:
                     return response
                 else:
                     self.sleeping_policy.sleep(try_i)
