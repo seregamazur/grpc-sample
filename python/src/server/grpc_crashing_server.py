@@ -4,11 +4,11 @@ from concurrent import futures
 
 import grpc
 
-import _credentials
+from src.utils import credentials
 import social_media_stream_pb2
 import social_media_stream_pb2_grpc
-from client.grpc_data_utils import _from_proto_stream
-from interceptor import grpc_server_auth_interceptor
+from src.client.grpc_data_utils import _from_proto_stream
+from src.interceptor import grpc_server_auth_interceptor
 
 
 class GrpcCrashingServer(social_media_stream_pb2_grpc.SocialMediaStreamServiceServicer):
@@ -79,8 +79,8 @@ def serve():
     server_credentials = grpc.ssl_server_credentials(
         (
             (
-                _credentials.SERVER_CERTIFICATE_KEY,
-                _credentials.SERVER_CERTIFICATE,
+                credentials.SERVER_CERTIFICATE_KEY,
+                credentials.SERVER_CERTIFICATE,
             ),
         )
     )

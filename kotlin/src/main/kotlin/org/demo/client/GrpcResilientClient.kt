@@ -30,6 +30,36 @@ class GrpcResilientClient(channel: Channel) {
         private val log = LoggerFactory.getLogger(GrpcResilientClient::class.java)
         private const val CALL_DEADLINE: Long = 5
 
+        @JvmStatic
+        fun getRetryingServiceConfig(): Map<String, Any> {
+            return ObjectMapper().readValue(
+                Files.newInputStream(Paths.get("retrying_config.json")),
+                object : TypeReference<Map<String, Any>>() {}
+            )
+        }
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            //use secure channel with TLS certificates
+            val tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
+                Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.crt"))
+            )
+                .build()
+
+            val retryServiceConfig: Map<String, Any> = getRetryingServiceConfig()
+
+            val channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 9030, tlsChannelCredentials)
+                .defaultServiceConfig(retryServiceConfig)
+                .enableRetry()
+                .intercept(ClientJwtInterceptor())
+                .build()
+            val client = GrpcResilientClient(channel)
+            client.downloadStream()
+            client.watchStream()
+            client.startStream()
+            client.joinInteractStream()
+            channel.shutdown()
+        }
     }
 
     private val blockingStub = SocialMediaStreamServiceGrpc.newBlockingStub(channel)
@@ -158,33 +188,4 @@ class GrpcResilientClient(channel: Channel) {
             log.error("RPC failed: {}", e.status)
         }
     }
-}
-
-fun getRetryingServiceConfig(): Map<String, Any> {
-    return ObjectMapper().readValue(
-        Files.newInputStream(Paths.get("retrying_config.json")),
-        object : TypeReference<Map<String, Any>>() {}
-    )
-}
-
-fun main() {
-    //use secure channel with TLS certificates
-    val tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
-        Files.newInputStream(Paths.get("tls_credentials/root.crt"))
-    )
-        .build()
-
-    val retryServiceConfig: Map<String, Any> = getRetryingServiceConfig()
-
-    val channel = Grpc.newChannelBuilderForAddress("localhost", 9030, tlsChannelCredentials)
-        .defaultServiceConfig(retryServiceConfig)
-        .enableRetry()
-        .intercept(ClientJwtInterceptor())
-        .build()
-    val client = GrpcResilientClient(channel)
-    client.downloadStream()
-    client.watchStream()
-    client.startStream()
-    client.joinInteractStream()
-    channel.shutdown()
 }

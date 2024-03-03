@@ -2,13 +2,13 @@ import logging as log
 
 import grpc
 
-import _credentials
 import social_media_stream_pb2_grpc as grpc_stubs
-from client.grpc_data_utils import _create_stream_request, _from_proto_stream, _generate_stream_data, _generate_interact_stream_data, \
+from src.client.grpc_data_utils import _create_stream_request, _from_proto_stream, _generate_stream_data, _generate_interact_stream_data, \
     _from_proto_stream_update
-from interceptor.grpc_client_auth_interceptor import AuthInterceptor
-from interceptor.grpc_client_circuit_breaker import CircuitBreakerClientInterceptor
-from interceptor.grpc_client_retry_handler import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
+from src.interceptor.grpc_client_auth_interceptor import AuthInterceptor
+from src.interceptor.grpc_client_circuit_breaker import CircuitBreakerClientInterceptor
+from src.interceptor.grpc_client_retry_handler import RetryOnRpcErrorClientInterceptor, ExponentialBackoff
+from src.utils import credentials
 
 
 class GrpcResilientClient:
@@ -60,7 +60,7 @@ class GrpcResilientClient:
         )
         # # Channel credential will be valid for the entire channel
         channel_credential = grpc.ssl_channel_credentials(
-            _credentials.ROOT_CERTIFICATE
+            credentials.SERVER_CERTIFICATE
         )
         # # Combining channel credentials and call credentials together
         composite_credentials = grpc.composite_channel_credentials(
@@ -68,7 +68,7 @@ class GrpcResilientClient:
             call_credentials,
         )
 
-        tls_channel = grpc.secure_channel('localhost:9030', composite_credentials, compression=grpc.Compression.Gzip)
+        tls_channel = grpc.secure_channel('grpc-crashing-server:9030', composite_credentials, compression=grpc.Compression.Gzip)
         return tls_channel
 
 

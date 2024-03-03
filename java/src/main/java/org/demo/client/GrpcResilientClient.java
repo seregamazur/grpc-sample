@@ -43,7 +43,7 @@ import static com.google.protobuf.ByteString.copyFrom;
 public class GrpcResilientClient {
 
     private static final String RETRY_CONFIG = "retrying_config.json";
-    private static final String TLS_CRT = "tls_credentials/root.crt";
+    private static final String TLS_CRT = "tls_credentials/grpc-crashing-server.crt";
     private static final long CALL_DEADLINE = 5;
 
     private SocialMediaStreamServiceGrpc.SocialMediaStreamServiceBlockingStub blockingStub;
@@ -194,7 +194,7 @@ public class GrpcResilientClient {
                 Files.newInputStream(Paths.get(TLS_CRT)))
             .build();
         Map<String, ?> serviceConfig = getRetryingServiceConfig();
-        ManagedChannel channel = Grpc.newChannelBuilderForAddress("localhost", 9030, tlsChannelCredentials)
+        ManagedChannel channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 9030, tlsChannelCredentials)
             .defaultServiceConfig(serviceConfig)
             .enableRetry()
             .intercept(new ClientJwtInterceptor())
