@@ -29,6 +29,22 @@ class GrpcCrashingServer : SocialMediaStreamServiceGrpc.SocialMediaStreamService
                 throw StatusRuntimeException(status.withDescription("RPC cancelled"))
             }
         }
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            //grpc allows both GZIP and no compression by default
+            val server = ServerBuilder.forPort(9030)
+                //use secure channel with TLS certificates
+                .useTransportSecurity(
+                    Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.crt")),
+                    Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.key"))
+                )
+                .addService(GrpcCrashingServer())
+                .intercept(ServerJwtInterceptor())
+                .build()
+            server.start()
+            server.awaitTermination()
+        }
     }
 
     override fun downloadStream(request: WatchStreamRequest?, responseObserver: StreamObserver<Recording>?) {
@@ -136,19 +152,4 @@ class GrpcCrashingServer : SocialMediaStreamServiceGrpc.SocialMediaStreamService
             }
         }
     }
-}
-
-fun main() {
-    //grpc allows both GZIP and no compression by default
-    val server = ServerBuilder.forPort(9030)
-        //use secure channel with TLS certificates
-        .useTransportSecurity(
-            Files.newInputStream(Paths.get("tls_credentials/localhost.crt")),
-            Files.newInputStream(Paths.get("tls_credentials/localhost.key"))
-        )
-        .addService(GrpcCrashingServer())
-        .intercept(ServerJwtInterceptor())
-        .build()
-    server.start()
-    server.awaitTermination()
 }

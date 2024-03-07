@@ -68,7 +68,7 @@ class GrpcResilientClient:
             call_credentials,
         )
 
-        tls_channel = grpc.secure_channel('grpc-crashing-server:9030', composite_credentials, compression=grpc.Compression.Gzip)
+        tls_channel = grpc.secure_channel('grpc-crashing-server:80', composite_credentials, compression=grpc.Compression.Gzip)
         return tls_channel
 
 

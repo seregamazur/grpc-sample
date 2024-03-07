@@ -48,7 +48,7 @@ class GrpcResilientClient(channel: Channel) {
 
             val retryServiceConfig: Map<String, Any> = getRetryingServiceConfig()
 
-            val channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 9030, tlsChannelCredentials)
+            val channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 80, tlsChannelCredentials)
                 .defaultServiceConfig(retryServiceConfig)
                 .enableRetry()
                 .intercept(ClientJwtInterceptor())

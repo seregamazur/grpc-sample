@@ -86,7 +86,7 @@ def serve():
     )
     # grpc allows both GZIP and no compression by default
     social_media_stream_pb2_grpc.add_SocialMediaStreamServiceServicer_to_server(GrpcCrashingServer(), server)
-    server.add_secure_port('localhost:9030', server_credentials)
+    server.add_secure_port('0.0.0.0:9030', server_credentials)
     server.start()
     server.wait_for_termination()
 

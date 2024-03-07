@@ -194,7 +194,7 @@ public class GrpcResilientClient {
                 Files.newInputStream(Paths.get(TLS_CRT)))
             .build();
         Map<String, ?> serviceConfig = getRetryingServiceConfig();
-        ManagedChannel channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 9030, tlsChannelCredentials)
+        ManagedChannel channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 80, tlsChannelCredentials)
             .defaultServiceConfig(serviceConfig)
             .enableRetry()
             .intercept(new ClientJwtInterceptor())

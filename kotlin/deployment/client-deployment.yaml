@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: client
+spec:
+  selector:
+    app: client
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9030
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: client
+  labels:
+    app: client
+spec:
+  restartPolicy: Never
+  containers:
+    - name: grpc-kotlin-client
+      image: grpc-kotlin-client:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 9030

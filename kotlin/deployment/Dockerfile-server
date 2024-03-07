@@ -1,0 +1,10 @@
+FROM adoptopenjdk:11-jdk-hotspot
+
+WORKDIR /app
+
+COPY kotlin/target/kotlin-1.0-SNAPSHOT.jar /app/kotlin-1.0-SNAPSHOT.jar
+COPY tls_credentials /app/tls_credentials
+
+ENV JWT_SECRET="L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0="
+
+CMD ["sh", "-c", "java -cp /app/kotlin-1.0-SNAPSHOT.jar org.demo.server.GrpcCrashingServer"]

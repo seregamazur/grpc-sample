@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpc-crashing-server
+spec:
+  selector:
+    app: server
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9030
+
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: server
+  labels:
+    app: server
+spec:
+  restartPolicy: Never
+  containers:
+    - name: server
+      image: grpc-python-server:latest
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 9030

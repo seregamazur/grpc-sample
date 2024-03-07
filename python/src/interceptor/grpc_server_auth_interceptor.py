@@ -3,7 +3,6 @@ import os
 
 import grpc
 import jwt
-from grpc_interceptor.exceptions import GrpcException
 
 
 class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
@@ -37,22 +36,15 @@ class GrpcAuthServerInterceptor(grpc.ServerInterceptor):
 
             return continuation(call_details)
 
-        except GrpcException as e:
-            # context.set_code(e.status_code)
-            # context.set_details(e.details)
-            raise
-
         except Exception:
             log.error('An error occurred during decoding JWT token')
-            # context.set_code(StatusCode.UNAUTHENTICATED)
-            # context.set_details('Unauthorized')
-            # return context  # Return the context instead of response_or_iterator
+            raise
 
     def _intercept_streaming(self, iterator, context):
         try:
             for resp in iterator:
                 yield resp
-        except GrpcException as e:
-            context.set_code(e.status_code)
-            context.set_details(e.details)
+        except grpc.RpcError as e:
+            context.set_code(resp.code())
+            context.set_details(resp.details())
             raise
