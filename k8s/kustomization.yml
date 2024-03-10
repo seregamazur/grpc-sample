@@ -1,0 +1,9 @@
+resources:
+  - namespace.yml
+  # Individual apps
+  - java-k8s/client/deployment.yaml
+  - java-k8s/client/service.yaml
+  - java-k8s/server/deployment.yaml
+  - java-k8s/server/service.yaml
+
+patchesJson6902:
