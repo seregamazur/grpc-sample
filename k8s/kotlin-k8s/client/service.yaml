@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: client
+  name: kotlin-client
 spec:
   selector:
-    app: client
+    app: kotlin-client
   ports:
     - protocol: TCP
       port: 80

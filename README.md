@@ -1,4 +1,6 @@
 # grpc-sample
+![Kubernetes](https://img.shields.io/badge/kubernetes-%23326ce5.svg?style=for-the-badge&logo=kubernetes&logoColor=white)
+
 
 This has been created to illustrate the gRPC technology features alongside Protobuf in practise, including all 4 types of API:
 
@@ -7,12 +9,7 @@ This has been created to illustrate the gRPC technology features alongside Proto
 - [Client streaming](https://github.com/seregamazur/grpc-sample/blob/master/proto/social-media-stream.proto#L45)
 - [Bidirectional streaming](https://github.com/seregamazur/grpc-sample/blob/master/proto/social-media-stream.proto#L47)
 
-Each module contains server and client. To test it just run ```mvn clean install -Prun-server-and-client```, it will:
-
-- generate classes and files using Protobuf
-- run server and client, make demonstrative calls (check logs)
-
-We use blocking (non-async) stubs to make unary and server streaming requests. Async stub used for client streaming and bidireactional
+We use blocking (non-async) stubs to make unary and server streaming requests. Async stub used for client streaming and bidirectional
 streaming.
 Used features:
 
@@ -31,3 +28,11 @@ Used features:
 | JWT Metadata            | [code](https://github.com/seregamazur/grpc-sample/blob/master/java/src/main/java/org/demo/interceptor/ClientJwtInterceptor.java#L31) | [code](https://github.com/seregamazur/grpc-sample/blob/master/java/src/main/java/org/demo/interceptor/ServerJwtInterceptor.java#L35) | [code](https://github.com/seregamazur/grpc-sample/blob/master/kotlin/src/main/kotlin/org/demo/interceptor/ClientJwtInterceptor.kt#L28) | [code](https://github.com/seregamazur/grpc-sample/blob/master/kotlin/src/main/kotlin/org/demo/interceptor/ServerJwtInterceptor.kt#L35) | [code](https://github.com/seregamazur/grpc-sample/blob/master/python/interceptor/grpc_client_auth_interceptor.py#L7)                       | [code](https://github.com/seregamazur/grpc-sample/blob/master/python/interceptor/grpc_server_auth_interceptor.py#L18) |
 | Cancel call             | -                                                                                                                                    | [code](https://github.com/seregamazur/grpc-sample/blob/master/java/src/main/java/org/demo/server/GrpcCrashingServer.java#L34)        | -                                                                                                                                      | [code](https://github.com/seregamazur/grpc-sample/blob/master/kotlin/src/main/kotlin/org/demo/server/GrpcCrashingServer.kt#L25)        | -                                                                                                                                          | [code](https://github.com/seregamazur/grpc-sample/blob/master/python/server/grpc_crashing_server.py#L17)              |
 | Retry config            | [json](https://github.com/seregamazur/grpc-sample/blob/master/retrying_config.json)                                                  | -                                                                                                                                    | [json](https://github.com/seregamazur/grpc-sample/blob/master/retrying_config.json)                                                    | -                                                                                                                                      | [Manual circuit breaker + retries](https://github.com/seregamazur/grpc-sample/blob/master/python/interceptor/grpc_client_retry_handler.py) | -                                                                                                                     |
+
+# How to start
+This project contains k8s deployments and services, so you can run this project easily on your env using [minikube](https://minikube.sigs.k8s.io/docs/start/).
+Run `k8s/kubectl-apply.sh -f` to start servers alongside all clients (Java, Kotlin, Python) one after another.
+Another way to start directly via IntelliJ .run folders contain Run Configurations.
+
+# Demo
+![til](./demo.gif)

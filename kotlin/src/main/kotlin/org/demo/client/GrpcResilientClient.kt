@@ -42,13 +42,13 @@ class GrpcResilientClient(channel: Channel) {
         fun main(args: Array<String>) {
             //use secure channel with TLS certificates
             val tlsChannelCredentials = TlsChannelCredentials.newBuilder().trustManager(
-                Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.crt"))
+                Files.newInputStream(Paths.get("tls_credentials/" + System.getenv("SERVER_HOST") + ".crt"))
             )
                 .build()
 
             val retryServiceConfig: Map<String, Any> = getRetryingServiceConfig()
 
-            val channel = Grpc.newChannelBuilderForAddress("grpc-crashing-server", 80, tlsChannelCredentials)
+            val channel = Grpc.newChannelBuilderForAddress(System.getenv("SERVER_HOST"), Integer.parseInt(System.getenv("SERVER_PORT")), tlsChannelCredentials)
                 .defaultServiceConfig(retryServiceConfig)
                 .enableRetry()
                 .intercept(ClientJwtInterceptor())

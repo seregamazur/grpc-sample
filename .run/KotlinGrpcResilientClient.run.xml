@@ -1,0 +1,15 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GrpcResilientClient" type="JetRunConfigurationType" nameIsGenerated="true">
+    <option name="MAIN_CLASS_NAME" value="org.demo.client.GrpcResilientClient" />
+    <module name="kotlin" />
+    <envs>
+      <env name="JWT_SECRET" value="L8hHXsaQOUjk5rg7XPGv4eL36anlCrkMz8CJ0i/8E/0=" />
+      <env name="SERVER_HOST" value="localhost" />
+      <env name="SERVER_PORT" value="9030" />
+    </envs>
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

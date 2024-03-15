@@ -7,5 +7,11 @@ def _load_credential_from_file(filepath):
         return f.read()
 
 
-SERVER_CERTIFICATE_KEY = _load_credential_from_file("../../tls_credentials/grpc-crashing-server.key")
-SERVER_CERTIFICATE = _load_credential_from_file("../../tls_credentials/grpc-crashing-server.crt")
+server_host = os.environ.get("SERVER_HOST")
+
+if server_host == "localhost":
+    SERVER_CERTIFICATE_KEY = _load_credential_from_file(f"../../../tls_credentials/{server_host}.key")
+    SERVER_CERTIFICATE = _load_credential_from_file(f"../../../tls_credentials/{server_host}.crt")
+else:
+    SERVER_CERTIFICATE_KEY = _load_credential_from_file(f"../../tls_credentials/{server_host}.key")
+    SERVER_CERTIFICATE = _load_credential_from_file(f"../../tls_credentials/{server_host}.crt")

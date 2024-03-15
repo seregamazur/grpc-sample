@@ -36,8 +36,8 @@ class GrpcCrashingServer : SocialMediaStreamServiceGrpc.SocialMediaStreamService
             val server = ServerBuilder.forPort(9030)
                 //use secure channel with TLS certificates
                 .useTransportSecurity(
-                    Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.crt")),
-                    Files.newInputStream(Paths.get("tls_credentials/grpc-crashing-server.key"))
+                    Files.newInputStream(Paths.get("tls_credentials/" + System.getenv("SERVER_HOST") + ".crt")),
+                    Files.newInputStream(Paths.get("tls_credentials/" + System.getenv("SERVER_HOST") + ".key"))
                 )
                 .addService(GrpcCrashingServer())
                 .intercept(ServerJwtInterceptor())

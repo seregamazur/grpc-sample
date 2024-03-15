@@ -1,10 +1,9 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: client
+  name: java-client
   labels:
-    app: client
-#  namespace: "grpc-demo"
+    app: java-client
 spec:
   restartPolicy: Never
   containers:
@@ -19,3 +18,7 @@ spec:
             secretKeyRef:
               name: jwt-secret
               key: JWT_SECRET
+        - name: SERVER_HOST
+          value: grpc-crashing-server
+        - name: SERVER_PORT
+          value: "80"

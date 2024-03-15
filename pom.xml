@@ -10,5 +10,48 @@
     <artifactId>grpc-sample</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <id>install-python</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <!-- install Python requirements -->
+                            <executable>bash</executable>
+                            <workingDirectory>${project.basedir}/python</workingDirectory>
+                            <commandlineArgs>
+                                -c "python -m venv venv &amp;&amp; source venv/bin/activate &amp;&amp; pip install -r requirements.txt"
+                            </commandlineArgs>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generate-protobuf-python</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <!-- generate Python files from proto -->
+                            <executable>python</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <commandlineArgs>
+                                -c "from grpc_tools import protoc;\
+                                protoc.main(['', '--python_out=python', '--grpc_python_out=python',
+                                '--proto_path=proto', 'social-media-stream.proto'])"
+                            </commandlineArgs>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>

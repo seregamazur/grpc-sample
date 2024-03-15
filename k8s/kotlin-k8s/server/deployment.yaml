@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: server
+  name: kotlin-server
   labels:
-    app: server
+    app: kotlin-server
 spec:
   restartPolicy: Never
   containers:
-    - name: server
+    - name: kotlin-server
       image: grpc-kotlin-server:latest
       imagePullPolicy: Never
       ports:
@@ -18,3 +18,7 @@ spec:
             secretKeyRef:
               name: jwt-secret
               key: JWT_SECRET
+        - name: SERVER_HOST
+          value: grpc-crashing-server
+        - name: SERVER_PORT
+          value: "80"

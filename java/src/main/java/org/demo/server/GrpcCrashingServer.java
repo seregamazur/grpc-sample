@@ -28,8 +28,8 @@ import static com.google.protobuf.ByteString.copyFrom;
 @Slf4j
 public class GrpcCrashingServer extends SocialMediaStreamServiceGrpc.SocialMediaStreamServiceImplBase {
 
-    private static final String TLS_CRT = "tls_credentials/grpc-crashing-server.crt";
-    private static final String TLS_KEY = "tls_credentials/grpc-crashing-server.key";
+    private static final String TLS_CRT = "tls_credentials/" + System.getenv("SERVER_HOST") + ".crt";
+    private static final String TLS_KEY = "tls_credentials/" + System.getenv("SERVER_HOST") + ".key";
 
     private void randomFailure(StreamObserver<?> responseObserver) {
         Random random = new Random();

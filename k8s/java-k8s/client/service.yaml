@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: client
+  name: java-client
 spec:
   selector:
-    app: client
+    app: java-client
   ports:
     - protocol: TCP
       port: 80

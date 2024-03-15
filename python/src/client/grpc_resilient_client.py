@@ -1,4 +1,5 @@
 import logging as log
+import os
 
 import grpc
 
@@ -19,7 +20,7 @@ class GrpcResilientClient:
         status_for_retry = [grpc.StatusCode.CANCELLED, grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.DEADLINE_EXCEEDED]
         interceptors = [
             RetryOnRpcErrorClientInterceptor(
-                max_attempts=3, sleeping_policy=ExponentialBackoff(init_backoff_ms=500, max_backoff_ms=4_000, multiplier=2),
+                max_attempts=3, sleeping_policy=ExponentialBackoff(init_backoff_ms=500, max_backoff_ms=5_000, multiplier=2),
                 status_for_retry=status_for_retry),
             CircuitBreakerClientInterceptor(failure_threshold=3, recovery_timeout=5, status_for_retry=status_for_retry)
         ]
@@ -68,7 +69,8 @@ class GrpcResilientClient:
             call_credentials,
         )
 
-        tls_channel = grpc.secure_channel('grpc-crashing-server:80', composite_credentials, compression=grpc.Compression.Gzip)
+        tls_channel = grpc.secure_channel(f"{os.environ.get('SERVER_HOST')}:{os.environ.get('SERVER_PORT')}",
+                                          composite_credentials, compression=grpc.Compression.Gzip)
         return tls_channel
 
 
