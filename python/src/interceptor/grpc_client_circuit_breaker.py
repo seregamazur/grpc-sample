@@ -12,7 +12,6 @@ class CircuitBreakerClientInterceptor(grpc.UnaryUnaryClientInterceptor, grpc.Una
     OPENED = 'OPENED'
     HALF_OPENED = 'HALF_OPENED'
 
-    # TODO add list of exceptions that are allowed to make retry (deadline)
     def __init__(self, failure_threshold: int, recovery_timeout: int, status_for_retry: List[grpc.StatusCode]):
         log.basicConfig(level=log.INFO, format='%(levelname)s - %(_failure_threshold) - %(message)s')
         self._failure_threshold = failure_threshold

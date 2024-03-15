@@ -1,34 +1,13 @@
-#!/bin/bash
-usage(){
- cat << EOF
-
- Usage: $0 -f
- Description: To apply k8s manifests using the default \`kubectl apply -f\` command
-EOF
-exit 0
-}
-
-logSummary() {
-    echo ""
-}
+#!/usr/local/bin/bash
 
 default() {
     docker build --no-cache -f k8s/python-k8s/client/Dockerfile -t grpc-python-client . \
     && docker build --no-cache -f k8s/python-k8s/server/Dockerfile -t grpc-python-server . \
+    && kubectl apply -f k8s/jwt_secret.yaml \
     && kubectl apply -f k8s/python-k8s/server/deployment.yaml \
     && kubectl apply -f k8s/python-k8s/server/service.yaml \
     && kubectl apply -f k8s/java-k8s/client/deployment.yaml \
-    && kubectl apply -f k8s/java-k8s/client/service.yaml \
-    && kubectl apply -f k8s/jwt_secret.yaml
+    && kubectl apply -f k8s/java-k8s/client/service.yaml
 }
 
-[[ "$@" =~ ^-[fks]{1}$ ]]  || usage;
-
-while getopts ":fks" opt; do
-    case ${opt} in
-    f ) echo "Applying default \`kubectl apply -f\`"; default ;;
-    \? | * ) usage ;;
-    esac
-done
-
-logSummary
+default
